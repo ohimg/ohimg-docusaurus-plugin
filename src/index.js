@@ -35,7 +35,7 @@ module.exports = function (context, options) {
 
       const ohimg = new OhImg({
         publishableKey: options.publishableKey,
-        webhookSecret: options.webhookSecret,
+        signatureSecret: options.signatureSecret,
       });
 
       // Filter and process routes from enabled plugins
