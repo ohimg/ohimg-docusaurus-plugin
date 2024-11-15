@@ -1,0 +1,33 @@
+{
+  "name": "@ohimg/ohimg-docusaurus-plugin",
+  "version": "1.0.0",
+  "description": "Docusaurus Plugin for OhImg - Open Graph Image Generator",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "test:node": "node --test tests/node.test.js",
+    "release": "standard-version",
+    "release:minor": "standard-version --release-as minor",
+    "release:major": "standard-version --release-as major",
+    "release:alpha": "standard-version --prerelease alpha",
+    "release:beta": "standard-version --prerelease beta"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.42.0",
+    "http-server": "^14.1.1",
+    "playwright": "^1.42.0",
+    "wrangler": "^3.28.2",
+    "standard-version": "^9.5.0",
+    "commitizen": "^4.3.0",
+    "cz-conventional-changelog": "^3.3.0"
+  },
+  "config": {
+    "commitizen": {
+      "path": "./node_modules/cz-conventional-changelog"
+    }
+  }
+}

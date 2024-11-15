@@ -1,0 +1,108 @@
+name: Release & Publish
+
+on:
+  workflow_dispatch:
+    inputs:
+      release-type:
+        description: "Release type (major, minor, patch, alpha, beta)"
+        required: true
+        default: "patch"
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+          - alpha
+          - beta
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Git config
+        run: |
+          git config --local user.name "github-actions[bot]"
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: "18.x"
+          registry-url: "https://registry.npmjs.org"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create Release Commit and Tag
+        id: create_release
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: ${CURRENT_VERSION}"
+
+          if [[ "${{ github.event.inputs.release-type }}" == "alpha" || "${{ github.event.inputs.release-type }}" == "beta" ]]; then
+            npm run release:${{ github.event.inputs.release-type }}
+          else
+            npm run release -- --release-as ${{ github.event.inputs.release-type }}
+          fi
+
+          NEW_VERSION=$(node -p "require('./package.json').version")
+          echo "NEW_VERSION=${NEW_VERSION}" >> $GITHUB_ENV
+          echo "New version: ${NEW_VERSION}"
+
+          # Generate the release notes
+          LAST_TAG=$(git describe --tags --abbrev=0)
+          echo "LAST_TAG: ${LAST_TAG}"
+          NEW_VERSION_FINAL_TAG="v${NEW_VERSION}"
+          PREV_VERSION_FINAL_TAG="v${CURRENT_VERSION}"
+
+          echo "NEW_VERSION_FINAL_TAG: ${NEW_VERSION_FINAL_TAG}"
+          echo "PREV_VERSION_FINAL_TAG: ${PREV_VERSION_FINAL_TAG}"
+
+          # echo "----- Test 1"
+
+          # git log --pretty=format:'- %s' $PREV_VERSION_FINAL_TAG..$NEW_VERSION_FINAL_TAG
+
+          # echo "----- Test 2"
+
+          git log --pretty=format:'- %s' $PREV_VERSION_FINAL_TAG..HEAD > release_notes.md
+
+          # git log --pretty=format:'- %s' $LAST_TAG..HEAD > release_notes.md
+
+      - name: Push Changes
+        run: |
+          echo "Pushing changes to repository..."
+          git push origin HEAD:main --follow-tags
+          echo "Push completed"
+
+      - name: Create GitHub Release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [[ "${{ github.event.inputs.release-type }}" == "alpha" || "${{ github.event.inputs.release-type }}" == "beta" ]]; then
+            gh release create "v${NEW_VERSION}" \
+              --title "v${NEW_VERSION}" \
+              --notes-file "release_notes.md" \
+              --prerelease
+          else
+            gh release create "v${NEW_VERSION}" \
+              --title "v${NEW_VERSION}" \
+              --notes-file "release_notes.md"
+          fi
+
+      - name: Publish to NPM
+        run: |
+          echo "Publishing version ${NEW_VERSION} to NPM..."
+          npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
