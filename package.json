@@ -20,12 +20,12 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.42.0",
+    "commitizen": "^4.3.0",
+    "cz-conventional-changelog": "^3.3.0",
     "http-server": "^14.1.1",
     "playwright": "^1.42.0",
-    "wrangler": "^3.28.2",
     "standard-version": "^9.5.0",
-    "commitizen": "^4.3.0",
-    "cz-conventional-changelog": "^3.3.0"
+    "wrangler": "^3.28.2"
   },
   "config": {
     "commitizen": {
