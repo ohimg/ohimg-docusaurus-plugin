@@ -38,6 +38,39 @@ module.exports = function (context, options) {
         signatureSecret: options.signatureSecret,
       });
 
+      const findExactRoutes = (routes, pluginName) => {
+        if (!Array.isArray(routes)) return [];
+        
+        return routes.reduce((acc, route) => {
+          // Initialize array to store routes from this level
+          let currentRoutes = [];
+          
+          // If this route is exact, add it to our collection
+          if (route.exact === true) {
+            currentRoutes.push({
+              ...route,
+              pluginName,
+            });
+          }
+          
+          // Process nested routes if they exist
+          if (route.routes) {
+            // If route.routes is an array of routes
+            if (Array.isArray(route.routes)) {
+              currentRoutes = currentRoutes.concat(findExactRoutes(route.routes, pluginName));
+            }
+            // If route.routes is a single route object
+            else if (typeof route.routes === 'object') {
+              currentRoutes = currentRoutes.concat(
+                findExactRoutes([route.routes], pluginName)
+              );
+            }
+          }
+          
+          return acc.concat(currentRoutes);
+        }, []);
+      };
+
       // Filter and process routes from enabled plugins
       const processableRoutes = plugins
         .filter((plugin) => {
@@ -53,20 +86,24 @@ module.exports = function (context, options) {
           return isSupported && isEnabled;
         })
         .flatMap((plugin) => {
-          // logDebug(`Processing routes for ${plugin.name}`);
+          if (!plugin.routes) return [];
+          return findExactRoutes(plugin.routes, plugin.name);
+
+          logDebug(`Processing routes for ${plugin.name}`);
+          logDebug("Plugin Routes", plugin.routes[0]);
           return (plugin.routes || []).map((route) => ({
             ...route,
             pluginName: plugin.name,
           }));
         });
 
-      // logDebug('\nProcessable Routes:',
-      //   processableRoutes.map(r => ({
-      //     path: r.path,
-      //     plugin: r.pluginName,
-      //     component: r.component
-      //   }))
-      // );
+      logDebug('\nProcessable Routes:',
+        processableRoutes.map(r => ({
+          path: r.path,
+          plugin: r.pluginName,
+          component: r.component
+        }))
+      );
 
       const processHtmlFile = async (filePath, route) => {
         try {
